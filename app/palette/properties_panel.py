@@ -2,10 +2,11 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDoubleSpinBox, QFormLayout, QGroupBox, QLabel, QLineEdit,
-    QScrollArea, QVBoxLayout, QWidget,
+    QPushButton, QScrollArea, QVBoxLayout, QWidget,
 )
 
 from app.canvas.items.subbasin_item import SubBasinItem, DEFAULT_PARAMETERS
+from app.dialogs.rainfall_dialog import RainfallDialog
 from app.canvas.items.node_item import NodeItem
 from app.canvas.items.reach_item import ReachItem
 from app.canvas.items.diversion_item import DiversionItem
@@ -159,6 +160,11 @@ class PropertiesPanel(QWidget):
             self._spin_boxes[key] = spin
             form_g.addRow(f"{key}:", spin)
         layout.addWidget(gw)
+
+        # Rainfall button
+        rain_btn = QPushButton("Edit Rainfall...")
+        rain_btn.clicked.connect(lambda: RainfallDialog(item, parent=self).exec())
+        layout.addWidget(rain_btn)
 
     def _build_node_panel(self, layout: QVBoxLayout, item: NodeItem):
         layout.addWidget(self._header("Node"))

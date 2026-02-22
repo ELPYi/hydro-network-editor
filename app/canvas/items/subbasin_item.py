@@ -41,6 +41,8 @@ class SubBasinItem(BaseNetworkItem):
         super().__init__(item_id, label, parent)
         self._connections: list = []  # ConnectionLine objects
         self._parameters: dict[str, float] = dict(DEFAULT_PARAMETERS)
+        self._rainfall_data: list[dict] = []  # [{"time": float, "rainfall_mm": float}, ...]
+        self._rainfall_time_unit: str = "hours"
         self.setZValue(1)
 
     @property
@@ -50,6 +52,23 @@ class SubBasinItem(BaseNetworkItem):
     @parameters.setter
     def parameters(self, value: dict[str, float]):
         self._parameters = value
+
+    @property
+    def rainfall_data(self) -> list[dict]:
+        return self._rainfall_data
+
+    @rainfall_data.setter
+    def rainfall_data(self, value: list[dict]):
+        self._rainfall_data = value
+        self.update()
+
+    @property
+    def rainfall_time_unit(self) -> str:
+        return self._rainfall_time_unit
+
+    @rainfall_time_unit.setter
+    def rainfall_time_unit(self, value: str):
+        self._rainfall_time_unit = value
 
     @property
     def connections(self) -> list:
@@ -93,5 +112,11 @@ class SubBasinItem(BaseNetworkItem):
         painter.setFont(font)
         label_rect = QRectF(0, SIZE + 2, SIZE, 16)
         painter.drawText(label_rect, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop, self._label)
+
+        # Blue dot indicator when rainfall data is present
+        if self._rainfall_data:
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QBrush(QColor("#1565C0")))
+            painter.drawEllipse(SIZE - 10, 2, 8, 8)
 
         self._draw_selection_highlight(painter, rect)

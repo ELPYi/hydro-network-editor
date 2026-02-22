@@ -90,6 +90,10 @@ class MainWindow(QMainWindow):
         edit_menu.addSeparator()
         self._add_action(edit_menu, "Sub-basin &Table...", self._open_subbasin_table, QKeySequence("Ctrl+T"))
 
+        # Help menu
+        help_menu = menu_bar.addMenu("&Help")
+        self._add_action(help_menu, "&Help Contents", self._show_help, QKeySequence.StandardKey.HelpContents)
+
     def _build_toolbar(self):
         tb = QToolBar("Main Toolbar")
         tb.setMovable(False)
@@ -197,3 +201,42 @@ class MainWindow(QMainWindow):
         for label, count in counts.items():
             parts.append(f"{label}: {count}")
         self.statusBar().showMessage("  |  ".join(parts))
+
+    def _show_help(self):
+        QMessageBox.information(
+            self,
+            "Hydro Network Editor – Help",
+            """<h2>Hydro Network Editor</h2>
+<p>A desktop application for visually creating and editing hydrological network models.</p>
+
+<h3>Elements</h3>
+<ul>
+  <li><b>Subbasin</b> – Represents a drainage area that collects and routes runoff.</li>
+  <li><b>Reach</b> – A river or stream segment that conveys flow between nodes.</li>
+  <li><b>Node</b> – A junction point where reaches and subbasins connect.</li>
+  <li><b>Diversion</b> – A branch that diverts flow away from the main channel.</li>
+  <li><b>Connection Line</b> – Links elements together to define flow paths.</li>
+</ul>
+
+<h3>Building a Network</h3>
+<ol>
+  <li>Drag elements from the <b>Elements palette</b> (left panel) onto the canvas.</li>
+  <li>Use the <b>Connect</b> tool to draw connection lines between elements.</li>
+  <li>Click any element to select it and edit its properties in the <b>Properties panel</b> (right panel).</li>
+  <li>Double-click an element to open its detailed properties dialog.</li>
+</ol>
+
+<h3>Subbasin Table</h3>
+<p>Use <b>Edit &gt; Sub-basin Table</b> (Ctrl+T) to view and edit all subbasin parameters in a tabular format.</p>
+
+<h3>Saving and Loading</h3>
+<p>Networks are saved as <b>JSON files</b> via <b>File &gt; Save</b> (Ctrl+S) and reopened with <b>File &gt; Open</b> (Ctrl+O).</p>
+
+<h3>Canvas Navigation</h3>
+<ul>
+  <li><b>Scroll wheel</b> – Zoom in / out</li>
+  <li><b>Middle-click drag</b> – Pan the canvas</li>
+  <li><b>Delete key</b> – Remove selected elements</li>
+  <li><b>Ctrl+A</b> – Select all elements</li>
+</ul>"""
+        )

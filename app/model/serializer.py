@@ -31,6 +31,8 @@ class Serializer:
                     "x": item.pos().x(),
                     "y": item.pos().y(),
                     "parameters": dict(item.parameters),
+                    "rainfall_time_unit": item.rainfall_time_unit,
+                    "rainfall_data": item.rainfall_data,
                 })
             elif isinstance(item, NodeItem):
                 data["nodes"].append({
@@ -80,6 +82,8 @@ class Serializer:
             item = scene.add_subbasin(sb["x"], sb["y"], sb["id"], sb["label"])
             if "parameters" in sb:
                 item.parameters.update(sb["parameters"])
+            item.rainfall_time_unit = sb.get("rainfall_time_unit", "hours")
+            item.rainfall_data = sb.get("rainfall_data", [])
             id_to_item[sb["id"]] = item
 
         for nd in data.get("nodes", []):
