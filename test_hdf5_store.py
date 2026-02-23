@@ -84,8 +84,8 @@ def run_tests() -> None:
         check("returns ndarray", isinstance(mat, np.ndarray))
         check("shape is (4, 2)", mat.shape == (4, 2), str(mat.shape))
         check("cols has 2 entries", len(cols) == 2, str(cols))
-        check("time column matches", np.allclose(mat[:, cols.index("time")], times))
-        check("rainfall_mm column matches", np.allclose(mat[:, cols.index("rainfall_mm")], values))
+        check("time column matches", np.allclose(mat[:, cols.index("time")].astype(float), times))
+        check("rainfall_mm column matches", np.allclose(mat[:, cols.index("rainfall_mm")].astype(float), values))
 
         # ----------------------------------------------------------------
         # 4. list_tree returns nested dict
@@ -108,7 +108,7 @@ def run_tests() -> None:
         store.write_rainfall("B1", "sb-001", new_times, new_vals)
         mat2, cols2 = store.read_dataset("inputs/rainfall/B1")
         check("overwrite: shape (2, 2)", mat2.shape == (2, 2), str(mat2.shape))
-        check("overwrite: values correct", np.allclose(mat2[:, cols2.index("rainfall_mm")], new_vals))
+        check("overwrite: values correct", np.allclose(mat2[:, cols2.index("rainfall_mm")].astype(float), new_vals))
 
         # ----------------------------------------------------------------
         # 6. read_dataset on non-existent path
@@ -137,7 +137,7 @@ def run_tests() -> None:
         store.write_hydrograph("N1", t_h, f_h)
         mat4, cols4 = store.read_dataset("outputs/hydrographs/N1")
         check("hydrograph shape (3, 2)", mat4.shape == (3, 2), str(mat4.shape))
-        check("flow_m3s values correct", np.allclose(mat4[:, cols4.index("flow_m3s")], f_h))
+        check("flow_m3s values correct", np.allclose(mat4[:, cols4.index("flow_m3s")].astype(float), f_h))
 
         # ----------------------------------------------------------------
         # 9. update_project_name

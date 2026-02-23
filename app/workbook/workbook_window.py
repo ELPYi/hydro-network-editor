@@ -34,6 +34,7 @@ class WorkbookWindow(QMainWindow):
         self._model = model
         self._scene = scene
         self._store: HDF5Store | None = None
+        self._json_path: str | None = None   # project JSON path for auto-save
         self._chart_mode: str = "line"   # "line" | "bar"
         self._current_hdf5_path: str | None = None  # full HDF5 path of selected leaf
 
@@ -49,6 +50,7 @@ class WorkbookWindow(QMainWindow):
     def set_project_file(self, json_path: str | None) -> None:
         """Switch to the HDF5 file that corresponds to *json_path*."""
         if json_path is None:
+            self._json_path = None
             self._store = None
             self._tree_model.clear()
             self._table_model.clear()
@@ -57,6 +59,7 @@ class WorkbookWindow(QMainWindow):
             self.setWindowTitle("Hydro Workbook — (no project)")
             return
 
+        self._json_path = json_path
         self._store = store_for_json(json_path)
         stem = Path(json_path).stem
         self.setWindowTitle(f"Hydro Workbook — {stem}")
@@ -161,6 +164,20 @@ class WorkbookWindow(QMainWindow):
                 area_km2=area,
             )
 
+    def _auto_save_json(self) -> None:
+        """Save the project JSON so that rainfall_data survives an app restart."""
+        if not self._json_path:
+            return
+        try:
+            from app.model.serializer import Serializer
+            Serializer.save(self._json_path, self._model, self._scene)
+        except Exception as exc:
+            QMessageBox.warning(
+                self, "Auto-save Warning",
+                f"Rainfall imported but project file could not be auto-saved:\n{exc}\n\n"
+                "Please save manually (Ctrl+S) to preserve the changes.",
+            )
+
     def _refresh(self) -> None:
         """Re-populate tree and validation from HDF5."""
         if self._store is None:
@@ -200,9 +217,48 @@ class WorkbookWindow(QMainWindow):
         if not isinstance(hdf5_path, str) or self._store is None:
             return
         self._current_hdf5_path = hdf5_path
+        self._display_hdf5_path(hdf5_path)
+
+    def _display_hdf5_path(self, hdf5_path: str) -> None:
+        """Read *hdf5_path* from HDF5 and populate the table and chart."""
+        if self._store is None:
+            return
         mat, cols = self._store.read_dataset(hdf5_path)
-        self._table_model.set_data(mat, cols)
-        self._plot(mat, cols, hdf5_path)
+        display_cols = self._friendly_headers(cols, hdf5_path)
+        self._table_model.set_data(mat, display_cols)
+        self._plot(mat, display_cols, hdf5_path)
+
+    @staticmethod
+    def _friendly_headers(cols: list[str], hdf5_path: str) -> list[str]:
+        """Replace internal HDF5 column names with human-readable labels.
+
+        The rainfall column is renamed to the basin label (e.g. "B1")
+        so the table clearly shows which basin's data is displayed.
+        """
+        parts = hdf5_path.split("/")
+        # inputs/rainfall/<basin> → basin label is parts[2]
+        basin_label = (
+            parts[2]
+            if len(parts) >= 3 and parts[0] == "inputs" and parts[1] == "rainfall"
+            else None
+        )
+        # outputs/hydrographs/<node> → node label is parts[2]
+        node_label = (
+            parts[2]
+            if len(parts) >= 3 and parts[0] == "outputs" and parts[1] == "hydrographs"
+            else None
+        )
+        result = []
+        for col in cols:
+            if col == "time":
+                result.append("Date/Time")
+            elif col == "rainfall_mm":
+                result.append(basin_label if basin_label else "Rainfall (mm)")
+            elif col == "flow_m3s":
+                result.append(node_label if node_label else "Flow (m³/s)")
+            else:
+                result.append(col)
+        return result
 
     def _plot(self, mat: np.ndarray, cols: list[str], title: str) -> None:
         if mat.size == 0 or mat.shape[1] < 2:
@@ -228,14 +284,12 @@ class WorkbookWindow(QMainWindow):
     def _set_line_mode(self) -> None:
         self._chart_mode = "line"
         if self._current_hdf5_path and self._store:
-            mat, cols = self._store.read_dataset(self._current_hdf5_path)
-            self._plot(mat, cols, self._current_hdf5_path)
+            self._display_hdf5_path(self._current_hdf5_path)
 
     def _set_bar_mode(self) -> None:
         self._chart_mode = "bar"
         if self._current_hdf5_path and self._store:
-            mat, cols = self._store.read_dataset(self._current_hdf5_path)
-            self._plot(mat, cols, self._current_hdf5_path)
+            self._display_hdf5_path(self._current_hdf5_path)
 
     def _import_all_basins_csv(self) -> None:
         """Import a multi-column rainfall CSV (Date, B1, B2, …) for all basins at once."""
@@ -317,8 +371,9 @@ class WorkbookWindow(QMainWindow):
             )
             return
 
-        # ---- Sync to HDF5 and refresh ----
+        # ---- Sync to HDF5, auto-save JSON, and refresh ----
         self._sync_from_model()
+        self._auto_save_json()
         self._refresh()
 
         msg = f"Imported {len(dates)} time steps into {len(updated)} basin(s): {', '.join(updated)}."

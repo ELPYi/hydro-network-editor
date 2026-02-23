@@ -1,0 +1,289 @@
+{
+  "version": "1.0",
+  "counters": {
+    "subbasin": 7,
+    "node": 6,
+    "reach": 5,
+    "connection": 6,
+    "diversion": 0
+  },
+  "subbasins": [
+    {
+      "id": "subbasin_6",
+      "label": "B6",
+      "x": -626.6004999999999,
+      "y": 247.90262499999997,
+      "parameters": {
+        "AREA": 0.0,
+        "IMP": 0.0,
+        "LAG": 0.0,
+        "INFIL": 0.0,
+        "SS": 3.0,
+        "FS": 0.4,
+        "RC": 0.3,
+        "RS": 0.0,
+        "RR": 0.0,
+        "RK": 0.3,
+        "RX": 1.2,
+        "RDEL": 0.0,
+        "FC": 0.8,
+        "DCS": 300.0,
+        "DCT": 360.0,
+        "A": 0.3,
+        "GSU": 300.0,
+        "GSP": 2.0,
+        "GDEL": 0.0
+      },
+      "rainfall_time_unit": "hours",
+      "rainfall_data": []
+    },
+    {
+      "id": "subbasin_5",
+      "label": "B5",
+      "x": -27.375749999999996,
+      "y": 305.69587499999994,
+      "parameters": {
+        "AREA": 0.0,
+        "IMP": 0.0,
+        "LAG": 0.0,
+        "INFIL": 0.0,
+        "SS": 3.0,
+        "FS": 0.4,
+        "RC": 0.3,
+        "RS": 0.0,
+        "RR": 0.0,
+        "RK": 0.3,
+        "RX": 1.2,
+        "RDEL": 0.0,
+        "FC": 0.8,
+        "DCS": 300.0,
+        "DCT": 360.0,
+        "A": 0.3,
+        "GSU": 300.0,
+        "GSP": 2.0,
+        "GDEL": 0.0
+      },
+      "rainfall_time_unit": "hours",
+      "rainfall_data": []
+    },
+    {
+      "id": "subbasin_1",
+      "label": "B1",
+      "x": -632.9625,
+      "y": -193.5190715625,
+      "parameters": {
+        "AREA": 0.0,
+        "IMP": 0.0,
+        "LAG": 0.0,
+        "INFIL": 0.0,
+        "SS": 3.0,
+        "FS": -2.6,
+        "RC": -1.7,
+        "RS": 0.0,
+        "RR": -1.0,
+        "RK": -0.7,
+        "RX": 1.2,
+        "RDEL": 0.0,
+        "FC": -2.2,
+        "DCS": 300.0,
+        "DCT": 360.0,
+        "A": 0.3,
+        "GSU": 300.0,
+        "GSP": 2.0,
+        "GDEL": 0.0
+      },
+      "rainfall_time_unit": "hours",
+      "rainfall_data": []
+    },
+    {
+      "id": "subbasin_2",
+      "label": "B2",
+      "x": -329.0,
+      "y": -209.0,
+      "parameters": {
+        "AREA": 0.0,
+        "IMP": 0.0,
+        "LAG": 0.0,
+        "INFIL": 0.0,
+        "SS": 3.0,
+        "FS": 0.4,
+        "RC": 0.3,
+        "RS": 0.0,
+        "RR": 0.0,
+        "RK": 0.3,
+        "RX": 1.2,
+        "RDEL": 0.0,
+        "FC": 0.8,
+        "DCS": 300.0,
+        "DCT": 360.0,
+        "A": 0.3,
+        "GSU": 300.0,
+        "GSP": 2.0,
+        "GDEL": 0.0
+      },
+      "rainfall_time_unit": "hours",
+      "rainfall_data": []
+    },
+    {
+      "id": "subbasin_3",
+      "label": "B3",
+      "x": -113.0,
+      "y": -152.0,
+      "parameters": {
+        "AREA": 0.0,
+        "IMP": 0.0,
+        "LAG": 0.0,
+        "INFIL": 0.0,
+        "SS": 3.0,
+        "FS": 0.4,
+        "RC": 0.3,
+        "RS": 0.0,
+        "RR": 0.0,
+        "RK": 0.3,
+        "RX": 1.2,
+        "RDEL": 0.0,
+        "FC": 0.8,
+        "DCS": 300.0,
+        "DCT": 360.0,
+        "A": 0.3,
+        "GSU": 300.0,
+        "GSP": 2.0,
+        "GDEL": 0.0
+      },
+      "rainfall_time_unit": "hours",
+      "rainfall_data": []
+    },
+    {
+      "id": "subbasin_4",
+      "label": "B4",
+      "x": -31.0,
+      "y": 149.0,
+      "parameters": {
+        "AREA": 0.0,
+        "IMP": 0.0,
+        "LAG": 0.0,
+        "INFIL": 0.0,
+        "SS": 3.0,
+        "FS": 0.4,
+        "RC": 0.3,
+        "RS": 0.0,
+        "RR": 0.0,
+        "RK": 0.3,
+        "RX": 1.2,
+        "RDEL": 0.0,
+        "FC": 0.8,
+        "DCS": 300.0,
+        "DCT": 360.0,
+        "A": 0.3,
+        "GSU": 300.0,
+        "GSP": 2.0,
+        "GDEL": 0.0
+      },
+      "rainfall_time_unit": "hours",
+      "rainfall_data": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "node_6",
+      "label": "N6",
+      "x": -454.0,
+      "y": 327.0
+    },
+    {
+      "id": "node_1",
+      "label": "N1",
+      "x": -519.5525,
+      "y": -43.645
+    },
+    {
+      "id": "node_2",
+      "label": "N2",
+      "x": -501.28499999999997,
+      "y": 137.21999999999997
+    },
+    {
+      "id": "node_3",
+      "label": "N3",
+      "x": -168.0,
+      "y": -1.0
+    },
+    {
+      "id": "node_4",
+      "label": "N4",
+      "x": -143.0,
+      "y": 151.0
+    },
+    {
+      "id": "node_5",
+      "label": "N5",
+      "x": -300.74500000000006,
+      "y": 267.67499999999995
+    }
+  ],
+  "reaches": [
+    {
+      "id": "reach_5",
+      "label": "C5",
+      "source_node_id": "node_5",
+      "dest_node_id": "node_6"
+    },
+    {
+      "id": "reach_1",
+      "label": "C1",
+      "source_node_id": "node_1",
+      "dest_node_id": "node_2"
+    },
+    {
+      "id": "reach_2",
+      "label": "C2",
+      "source_node_id": "node_3",
+      "dest_node_id": "node_4"
+    },
+    {
+      "id": "reach_3",
+      "label": "C3",
+      "source_node_id": "node_2",
+      "dest_node_id": "node_5"
+    },
+    {
+      "id": "reach_4",
+      "label": "C4",
+      "source_node_id": "node_4",
+      "dest_node_id": "node_5"
+    }
+  ],
+  "diversions": [],
+  "connections": [
+    {
+      "id": "connection_6",
+      "source_subbasin_id": "subbasin_6",
+      "dest_node_id": "node_6"
+    },
+    {
+      "id": "connection_5",
+      "source_subbasin_id": "subbasin_5",
+      "dest_node_id": "node_5"
+    },
+    {
+      "id": "connection_1",
+      "source_subbasin_id": "subbasin_1",
+      "dest_node_id": "node_1"
+    },
+    {
+      "id": "connection_2",
+      "source_subbasin_id": "subbasin_2",
+      "dest_node_id": "node_2"
+    },
+    {
+      "id": "connection_3",
+      "source_subbasin_id": "subbasin_3",
+      "dest_node_id": "node_3"
+    },
+    {
+      "id": "connection_4",
+      "source_subbasin_id": "subbasin_4",
+      "dest_node_id": "node_4"
+    }
+  ]
+}
