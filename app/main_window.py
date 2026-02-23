@@ -12,6 +12,7 @@ from app.model.serializer import Serializer
 from app.palette.element_palette import ElementPalette
 from app.dialogs.subbasin_table_dialog import SubBasinTableDialog
 from app.palette.properties_panel import PropertiesPanel
+from app.workbook.workbook_window import WorkbookWindow
 
 
 class MainWindow(QMainWindow):
@@ -19,6 +20,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._current_file: str | None = None
         self._model = NetworkModel()
+        self._workbook: WorkbookWindow | None = None
 
         self._init_ui()
         self._update_title()
@@ -90,6 +92,10 @@ class MainWindow(QMainWindow):
         edit_menu.addSeparator()
         self._add_action(edit_menu, "Sub-basin &Table...", self._open_subbasin_table, QKeySequence("Ctrl+T"))
 
+        # Workbook menu
+        workbook_menu = menu_bar.addMenu("&Workbook")
+        self._add_action(workbook_menu, "&Open Workbook", self._open_workbook, QKeySequence("Ctrl+W"))
+
         # Help menu
         help_menu = menu_bar.addMenu("&Help")
         self._add_action(help_menu, "&Help Contents", self._show_help, QKeySequence.StandardKey.HelpContents)
@@ -123,6 +129,8 @@ class MainWindow(QMainWindow):
         self._model.reset()
         self._current_file = None
         self._update_title()
+        if self._workbook is not None:
+            self._workbook.set_project_file(self._current_file)
 
     def _open_file(self):
         if not self._confirm_discard():
@@ -136,6 +144,8 @@ class MainWindow(QMainWindow):
             Serializer.load(path, self._model, self._scene)
             self._current_file = path
             self._update_title()
+            if self._workbook is not None:
+                self._workbook.set_project_file(self._current_file)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to open file:\n{e}")
 
@@ -185,6 +195,14 @@ class MainWindow(QMainWindow):
         if dlg.exec():
             # Refresh properties panel if a sub-basin is selected
             self._on_selection_changed()
+
+    def _open_workbook(self):
+        if self._workbook is None:
+            self._workbook = WorkbookWindow(self._model, self._scene, parent=self)
+        self._workbook.set_project_file(self._current_file)
+        self._workbook.show()
+        self._workbook.raise_()
+        self._workbook.activateWindow()
 
     def _on_selection_changed(self):
         self._props_panel.update_selection(self._scene.selectedItems())

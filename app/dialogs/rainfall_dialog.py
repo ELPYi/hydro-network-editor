@@ -1,10 +1,12 @@
 """Dialog for editing per-subbasin rainfall time series (hyetograph)."""
+import csv
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QAbstractItemView, QApplication, QComboBox, QDialog, QDialogButtonBox,
-    QHBoxLayout, QHeaderView, QLabel, QPushButton, QTableWidget,
-    QTableWidgetItem, QVBoxLayout,
+    QFileDialog, QHBoxLayout, QHeaderView, QLabel, QMessageBox, QPushButton,
+    QTableWidget, QTableWidgetItem, QVBoxLayout,
 )
 
 from app.canvas.items.subbasin_item import SubBasinItem
@@ -37,10 +39,13 @@ class RainfallDialog(QDialog):
         btn_row = QHBoxLayout()
         add_btn = QPushButton("Add Row")
         remove_btn = QPushButton("Remove Row")
+        load_csv_btn = QPushButton("Load from CSV…")
         add_btn.clicked.connect(self._add_row)
         remove_btn.clicked.connect(self._remove_row)
+        load_csv_btn.clicked.connect(self._load_from_csv)
         btn_row.addWidget(add_btn)
         btn_row.addWidget(remove_btn)
+        btn_row.addWidget(load_csv_btn)
         btn_row.addStretch()
         layout.addLayout(btn_row)
 
@@ -127,6 +132,48 @@ class RainfallDialog(QDialog):
                         item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                         self._table.setItem(target_row, target_col, item)
                     item.setText(value)
+
+    def _load_from_csv(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Rainfall CSV",
+            "",
+            "CSV Files (*.csv);;All Files (*)",
+        )
+        if not path:
+            return
+
+        rows = []
+        try:
+            with open(path, newline="", encoding="utf-8-sig") as f:
+                sample = f.read(4096)
+                f.seek(0)
+                dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
+                has_header = csv.Sniffer().has_header(sample)
+                reader = csv.reader(f, dialect)
+                if has_header:
+                    next(reader, None)
+                for lineno, row in enumerate(reader, start=2 if has_header else 1):
+                    if not row or all(cell.strip() == "" for cell in row):
+                        continue
+                    if len(row) < 2:
+                        raise ValueError(
+                            f"Line {lineno}: expected at least 2 columns, got {len(row)}."
+                        )
+                    t = float(row[0].strip())
+                    r = float(row[1].strip())
+                    rows.append((t, r))
+        except (OSError, csv.Error, ValueError) as exc:
+            QMessageBox.warning(self, "CSV Import Error", str(exc))
+            return
+
+        if not rows:
+            QMessageBox.information(self, "CSV Import", "No data rows found in file.")
+            return
+
+        self._table.setRowCount(0)
+        for t, r in rows:
+            self._append_row(t, r)
 
     def _apply(self):
         data = []
