@@ -89,19 +89,29 @@ class HDF5Store:
         self,
         subbasin_label: str,
         subbasin_id: str,
-        times: np.ndarray,
+        times,
         values: np.ndarray,
         time_unit: str = "hours",
         area_km2: float = 0.0,
     ) -> None:
-        """Write (or overwrite) a subbasin rainfall dataset."""
+        """Write (or overwrite) a subbasin rainfall dataset.
+
+        *times* may be a list/array of strings (date/time) or floats.
+        """
         with h5py.File(self._path, "a") as h5:
             group_path = f"inputs/rainfall/{subbasin_label}"
             # Remove existing group so we can recreate cleanly
             if group_path in h5:
                 del h5[group_path]
             grp = h5.require_group(group_path)
-            grp.create_dataset("time", data=times.astype(np.float64))
+            # Write time dataset: strings or floats
+            if _is_string_sequence(times):
+                grp.create_dataset(
+                    "time",
+                    data=np.array([str(t) for t in times], dtype=h5py.string_dtype()),
+                )
+            else:
+                grp.create_dataset("time", data=np.asarray(times, dtype=np.float64))
             grp.create_dataset("rainfall_mm", data=values.astype(np.float64))
             grp.attrs["time_unit"] = time_unit
             grp.attrs["subbasin_id"] = subbasin_id
@@ -139,21 +149,24 @@ class HDF5Store:
                 return np.empty((0, 2)), []
             node = h5[hdf5_path]
             if isinstance(node, h5py.Dataset):
-                arr = node[()]
+                arr = _read_dataset_values(node)
                 return arr.reshape(-1, 1), [hdf5_path.split("/")[-1]]
             # It's a group — collect child datasets
             datasets: dict[str, np.ndarray] = {}
             for name, item in node.items():
                 if isinstance(item, h5py.Dataset):
-                    datasets[name] = item[()]
+                    datasets[name] = _read_dataset_values(item)
 
         if not datasets:
             return np.empty((0, 0)), []
 
-        col_names = list(datasets.keys())
-        # Stack column-wise; if lengths differ, pad/trim to minimum
+        # Always put 'time' first so Date/Time appears as column 0
+        col_names = sorted(datasets.keys(), key=lambda c: (0 if c == "time" else 1, c))
         length = min(len(v) for v in datasets.values())
-        mat = np.column_stack([datasets[c][:length] for c in col_names])
+        # Use object array so strings and floats can coexist
+        mat = np.empty((length, len(col_names)), dtype=object)
+        for i, col in enumerate(col_names):
+            mat[:, i] = datasets[col][:length]
         return mat, col_names
 
     def list_tree(self) -> dict:
@@ -190,6 +203,23 @@ class HDF5Store:
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
+
+def _is_string_sequence(seq) -> bool:
+    """Return True if *seq* contains string values."""
+    if isinstance(seq, np.ndarray):
+        return seq.dtype.kind in ("U", "S", "O") and seq.size > 0 and isinstance(seq.flat[0], str)
+    return bool(seq) and isinstance(next(iter(seq)), str)
+
+
+def _read_dataset_values(ds: h5py.Dataset) -> np.ndarray:
+    """Read a dataset, decoding bytes→str for string datasets."""
+    data = ds[()]
+    if ds.dtype.kind == "S" or (ds.dtype.kind == "O" and data.size > 0 and isinstance(data.flat[0], bytes)):
+        return np.array([v.decode("utf-8") if isinstance(v, bytes) else str(v) for v in data])
+    if ds.dtype.kind == "O" and data.size > 0 and isinstance(data.flat[0], str):
+        return data  # already decoded strings (h5py 3.x vlen)
+    return data
+
 
 def _collect(result: dict, name: str, obj) -> None:
     """visititems callback — builds nested dict; leaves store the full path."""

@@ -23,22 +23,29 @@ class DatasetTreeModel(QStandardItemModel):
         self.clear()
         self.setHorizontalHeaderLabels(["Dataset"])
         tree = store.list_tree()
-        self._build(self.invisibleRootItem(), tree)
+        self._build(self.invisibleRootItem(), tree, "")
 
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
 
-    def _build(self, parent_item: QStandardItem, node: dict) -> None:
+    def _build(self, parent_item: QStandardItem, node: dict, current_path: str) -> None:
         for key, val in sorted(node.items()):
             item = QStandardItem(key)
             item.setEditable(False)
+            path = f"{current_path}/{key}" if current_path else key
             if isinstance(val, dict):
-                # Group node — recurse
-                item.setData(None, Qt.ItemDataRole.UserRole)
+                # Leaf group: every child is a dataset (no nested sub-groups).
+                # Make the group itself the clickable unit so all datasets
+                # (e.g. Date/Time + rainfall_mm) are always shown together.
+                if val and all(isinstance(v, str) for v in val.values()):
+                    item.setData(path, Qt.ItemDataRole.UserRole)
+                else:
+                    # Regular group — recurse to show children
+                    item.setData(None, Qt.ItemDataRole.UserRole)
+                    self._build(item, val, path)
                 parent_item.appendRow(item)
-                self._build(item, val)
             else:
-                # Leaf dataset — store full HDF5 path
+                # Standalone dataset leaf — store full HDF5 path
                 item.setData(val, Qt.ItemDataRole.UserRole)
                 parent_item.appendRow(item)

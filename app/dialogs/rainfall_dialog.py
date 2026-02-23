@@ -51,7 +51,7 @@ class RainfallDialog(QDialog):
 
         # Table
         self._table = QTableWidget(0, 2)
-        self._table.setHorizontalHeaderLabels(["Time Step", "Rainfall (mm)"])
+        self._table.setHorizontalHeaderLabels(["Date/Time", "Rainfall (mm)"])
         self._table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self._table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         layout.addWidget(self._table)
@@ -79,11 +79,16 @@ class RainfallDialog(QDialog):
         for row_data in self._item.rainfall_data:
             self._append_row(row_data.get("time", 0.0), row_data.get("rainfall_mm", 0.0))
 
-    def _append_row(self, time_val=0.0, rain_val=0.0):
+    def _append_row(self, time_val="", rain_val=0.0):
         row = self._table.rowCount()
         self._table.insertRow(row)
-        t_item = QTableWidgetItem(f"{time_val:g}")
-        t_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        # Time: display as-is (string dates) or as number string for legacy float data
+        if isinstance(time_val, float):
+            t_str = f"{time_val:g}"
+        else:
+            t_str = str(time_val)
+        t_item = QTableWidgetItem(t_str)
+        t_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         r_item = QTableWidgetItem(f"{rain_val:g}")
         r_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self._table.setItem(row, 0, t_item)
@@ -148,21 +153,27 @@ class RainfallDialog(QDialog):
             with open(path, newline="", encoding="utf-8-sig") as f:
                 sample = f.read(4096)
                 f.seek(0)
-                dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
-                has_header = csv.Sniffer().has_header(sample)
+                try:
+                    dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
+                except csv.Error:
+                    dialect = csv.excel  # fall back to comma
+                has_header = csv.Sniffer().has_header(sample) if sample.strip() else False
                 reader = csv.reader(f, dialect)
                 if has_header:
                     next(reader, None)
+                time_counter = 0
                 for lineno, row in enumerate(reader, start=2 if has_header else 1):
                     if not row or all(cell.strip() == "" for cell in row):
                         continue
-                    if len(row) < 2:
-                        raise ValueError(
-                            f"Line {lineno}: expected at least 2 columns, got {len(row)}."
-                        )
-                    t = float(row[0].strip())
-                    r = float(row[1].strip())
-                    rows.append((t, r))
+                    if len(row) == 1:
+                        # Single-column: treat value as rainfall, auto-number time steps
+                        r = float(row[0].strip())
+                        rows.append((str(time_counter), r))
+                        time_counter += 1
+                    else:
+                        t = row[0].strip()   # keep date/time as string
+                        r = float(row[1].strip())
+                        rows.append((t, r))
         except (OSError, csv.Error, ValueError) as exc:
             QMessageBox.warning(self, "CSV Import Error", str(exc))
             return
@@ -181,11 +192,12 @@ class RainfallDialog(QDialog):
             t_item = self._table.item(row, 0)
             r_item = self._table.item(row, 1)
             try:
-                t = float(t_item.text()) if t_item else 0.0
+                t = t_item.text().strip() if t_item else ""
                 r = float(r_item.text()) if r_item else 0.0
-                data.append({"time": t, "rainfall_mm": r})
+                if t:  # skip rows where date/time is blank
+                    data.append({"time": t, "rainfall_mm": r})
             except ValueError:
-                pass  # Skip unparseable rows silently
+                pass  # Skip unparseable rainfall rows silently
 
         self._item.rainfall_data = data
         self._item.rainfall_time_unit = self._unit_combo.currentText().lower()

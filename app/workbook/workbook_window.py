@@ -89,6 +89,7 @@ class WorkbookWindow(QMainWindow):
         tb.addSeparator()
         self._act_import = tb.addAction("Import CSV", self._import_csv)
         self._act_export = tb.addAction("Export CSV", self._export_csv)
+        self._act_import_all = tb.addAction("Import All Basins…", self._import_all_basins_csv)
         tb.addSeparator()
         self._act_line = tb.addAction("Line", self._set_line_mode)
         self._act_bar = tb.addAction("Bar", self._set_bar_mode)
@@ -148,7 +149,7 @@ class WorkbookWindow(QMainWindow):
             data = item.rainfall_data
             if not data:
                 continue
-            times = np.array([d["time"] for d in data], dtype=np.float64)
+            times = [str(d["time"]) for d in data]   # always strings
             values = np.array([d["rainfall_mm"] for d in data], dtype=np.float64)
             area = float(item.parameters.get("AREA", 0.0))
             self._store.write_rainfall(
@@ -236,6 +237,95 @@ class WorkbookWindow(QMainWindow):
             mat, cols = self._store.read_dataset(self._current_hdf5_path)
             self._plot(mat, cols, self._current_hdf5_path)
 
+    def _import_all_basins_csv(self) -> None:
+        """Import a multi-column rainfall CSV (Date, B1, B2, …) for all basins at once."""
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Import All Basins CSV", "", "CSV Files (*.csv);;All Files (*)"
+        )
+        if not path:
+            return
+
+        # ---- Parse CSV ----
+        try:
+            with open(path, newline="", encoding="utf-8-sig") as f:
+                sample = f.read(4096)
+                f.seek(0)
+                try:
+                    dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
+                except csv.Error:
+                    dialect = csv.excel
+                reader = csv.reader(f, dialect)
+                headers = next(reader, None)
+                if not headers or len(headers) < 2:
+                    QMessageBox.warning(self, "Import Error",
+                                        "CSV must have at least 2 columns: Date + one basin.")
+                    return
+
+                # First column is the date; remaining columns are subbasin labels
+                basin_labels = [h.strip() for h in headers[1:]]
+                dates: list[str] = []
+                basin_rows: dict[str, list[float]] = {lbl: [] for lbl in basin_labels}
+
+                for lineno, row in enumerate(reader, start=2):
+                    if not row or all(c.strip() == "" for c in row):
+                        continue
+                    dates.append(row[0].strip())
+                    for i, lbl in enumerate(basin_labels):
+                        col_idx = i + 1
+                        try:
+                            val = float(row[col_idx].strip()) if col_idx < len(row) else 0.0
+                        except ValueError:
+                            val = 0.0
+                        basin_rows[lbl].append(val)
+
+        except (OSError, csv.Error) as exc:
+            QMessageBox.critical(self, "Import Error", str(exc))
+            return
+
+        if not dates:
+            QMessageBox.information(self, "Import All Basins", "No data rows found.")
+            return
+
+        # ---- Match columns to scene SubBasinItems ----
+        from app.canvas.items.subbasin_item import SubBasinItem
+        scene_basins: dict[str, object] = {
+            item.label: item
+            for item in self._scene.items()
+            if isinstance(item, SubBasinItem)
+        }
+
+        updated: list[str] = []
+        skipped: list[str] = []
+        for lbl in basin_labels:
+            if lbl in scene_basins:
+                item = scene_basins[lbl]
+                item.rainfall_data = [
+                    {"time": date, "rainfall_mm": rain}
+                    for date, rain in zip(dates, basin_rows[lbl])
+                ]
+                item.rainfall_time_unit = "days"
+                updated.append(lbl)
+            else:
+                skipped.append(lbl)
+
+        if not updated:
+            QMessageBox.warning(
+                self, "Import All Basins",
+                f"No basin labels matched.\n"
+                f"CSV columns: {', '.join(basin_labels)}\n"
+                f"Project basins: {', '.join(scene_basins) or '(none)'}",
+            )
+            return
+
+        # ---- Sync to HDF5 and refresh ----
+        self._sync_from_model()
+        self._refresh()
+
+        msg = f"Imported {len(dates)} time steps into {len(updated)} basin(s): {', '.join(updated)}."
+        if skipped:
+            msg += f"\n\nSkipped {len(skipped)} column(s) not in project: {', '.join(skipped)}."
+        QMessageBox.information(self, "Import Complete", msg)
+
     def _export_csv(self) -> None:
         if self._current_hdf5_path is None or self._store is None:
             QMessageBox.information(self, "Export CSV", "Select a dataset in the tree first.")
@@ -249,12 +339,23 @@ class WorkbookWindow(QMainWindow):
         )
         if not path:
             return
+        # Build a meaningful header: "Date/Time" for time col, basin label for rainfall col
+        parts = (self._current_hdf5_path or "").split("/")
+        basin_name = parts[2] if len(parts) >= 3 else ""
+        export_headers = []
+        for col in cols:
+            if col == "time":
+                export_headers.append("Date/Time")
+            elif col == "rainfall_mm" and basin_name:
+                export_headers.append(basin_name)
+            else:
+                export_headers.append(col)
         try:
             with open(path, "w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
-                writer.writerow(cols)
+                writer.writerow(export_headers)
                 for row in mat:
-                    writer.writerow([f"{v:.6g}" for v in row])
+                    writer.writerow([v if isinstance(v, str) else f"{v:.6g}" for v in row])
         except OSError as exc:
             QMessageBox.critical(self, "Export Error", str(exc))
 
@@ -283,17 +384,24 @@ class WorkbookWindow(QMainWindow):
             with open(path, newline="", encoding="utf-8-sig") as f:
                 sample = f.read(4096)
                 f.seek(0)
-                dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
-                has_header = csv.Sniffer().has_header(sample)
+                try:
+                    dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
+                except csv.Error:
+                    dialect = csv.excel  # fall back to comma
+                has_header = csv.Sniffer().has_header(sample) if sample.strip() else False
                 reader = csv.reader(f, dialect)
                 if has_header:
                     next(reader, None)
+                time_counter = 0
                 for lineno, row in enumerate(reader, start=2 if has_header else 1):
                     if not row or all(c.strip() == "" for c in row):
                         continue
-                    if len(row) < 2:
-                        raise ValueError(f"Line {lineno}: expected ≥2 columns, got {len(row)}.")
-                    rows.append((float(row[0].strip()), float(row[1].strip())))
+                    if len(row) == 1:
+                        # Single-column: treat as rainfall, auto-number time steps
+                        rows.append((str(time_counter), float(row[0].strip())))
+                        time_counter += 1
+                    else:
+                        rows.append((row[0].strip(), float(row[1].strip())))
         except (OSError, csv.Error, ValueError) as exc:
             QMessageBox.warning(self, "Import Error", str(exc))
             return
@@ -302,7 +410,7 @@ class WorkbookWindow(QMainWindow):
             QMessageBox.information(self, "Import CSV", "No data rows found.")
             return
 
-        times = np.array([r[0] for r in rows], dtype=np.float64)
+        times = [r[0] for r in rows]   # list of strings
         values = np.array([r[1] for r in rows], dtype=np.float64)
 
         # Preserve existing attrs if possible

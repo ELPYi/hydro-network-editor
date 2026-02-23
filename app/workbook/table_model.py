@@ -47,8 +47,13 @@ class WorkbookTableModel(QAbstractTableModel):
             return None
         if role == Qt.ItemDataRole.DisplayRole:
             val = self._data[index.row(), index.column()]
-            return f"{val:.4f}"
+            if isinstance(val, (float, np.floating)):
+                return f"{val:.4f}"
+            return str(val)
         if role == Qt.ItemDataRole.TextAlignmentRole:
+            val = self._data[index.row(), index.column()]
+            if isinstance(val, str):
+                return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
             return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         return None
 

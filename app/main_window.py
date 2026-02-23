@@ -140,6 +140,9 @@ class MainWindow(QMainWindow):
         )
         if not path:
             return
+        self._open_file_path(path)
+
+    def _open_file_path(self, path: str):
         try:
             Serializer.load(path, self._model, self._scene)
             self._current_file = path
