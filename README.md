@@ -2,6 +2,8 @@
 
 A desktop application for visually creating and editing hydrological network models. Built with Python and PyQt6.
 
+![Hydro Network Editor](screenshot.png)
+
 ## Features
 
 - **Visual Network Canvas** - Drag-and-drop interface for building hydrological networks
